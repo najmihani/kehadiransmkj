@@ -1,0 +1,499 @@
+
+
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>e-Pergerakan SMK Jinjang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .hidden-section { display: none; }
+        .pulse-btn { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-gray-800">
+    <div id="app" class="max-w-6xl mx-auto p-4 space-y-4">
+        
+        <header class="text-center py-6 text-blue-900 no-print">
+            <h1 class="text-3xl font-extrabold uppercase tracking-tight">e-Pergerakan SMK Jinjang</h1>
+            <p id="clock" class="text-sm font-mono text-slate-500 mt-1"></p>
+        </header>
+
+        <!-- LOGIN -->
+        <div id="section-login" class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border no-print">
+            <div class="flex justify-center mb-6">
+                <div class="p-3 bg-blue-100 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+            </div>
+            <h2 class="font-bold text-xl mb-6 text-center text-slate-700">Log Masuk</h2>
+            <input type="text" id="userInp" placeholder="ID Pengguna" class="w-full p-3 mb-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+            <input type="password" id="passInp" placeholder="Kata Laluan" class="w-full p-3 mb-6 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+            <button onclick="doLogin()" id="loginBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">MASUK</button>
+            <p id="login-err" class="text-red-500 text-xs mt-4 hidden text-center font-semibold"></p>
+        </div>
+
+        <!-- USER DASHBOARD -->
+        <div id="section-user" class="hidden-section space-y-4 no-print max-w-2xl mx-auto">
+            <div class="bg-blue-900 text-white p-5 rounded-2xl flex justify-between items-center shadow-lg">
+                <div>
+                    <p class="text-[10px] text-blue-300 uppercase font-bold tracking-widest">Akaun Pengguna</p>
+                    <span id="user-name" class="font-bold uppercase text-lg"></span>
+                </div>
+                <button onclick="logout()" class="text-xs bg-red-500 hover:bg-red-600 px-5 py-2 rounded-xl font-bold transition">LOG KELUAR</button>
+            </div>
+
+            <div id="gps-card" class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex flex-col items-center space-y-3">
+                <div id="status-icon" class="p-3 bg-slate-100 rounded-full text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <p id="geo-status" class="text-sm font-bold text-slate-600 uppercase">GPS Belum Diaktifkan</p>
+                <button id="btn-activate-gps" onclick="initGPS()" class="pulse-btn w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-sm uppercase shadow-md">Aktifkan Lokasi (GPS)</button>
+                <p id="geo-warn" class="text-red-600 text-xs hidden text-center font-bold bg-red-50 p-3 rounded-lg border border-red-200 w-full">⚠️ Anda berada di luar kawasan sekolah (Had 50m). Sila tukar Jenis Kehadiran jika bekerja di luar.</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm space-y-4 border border-slate-100">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Tarikh Hari Ini</label>
+                    <input type="date" id="f-tarikh" class="w-full p-3 border rounded-xl bg-slate-50 font-bold text-blue-900" readonly>
+                  </div>
+                  <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Jenis Kehadiran</label>
+                    <select id="f-kehadiran" onchange="handleTypeChange()" class="w-full p-3 border rounded-xl font-bold text-blue-900 bg-white">
+                        <option value="HADIR">HADIR (DI SEKOLAH)</option>
+                        <option value="URUSAN RASMI">URUSAN RASMI (LUAR)</option>
+                        <option value="KELUAR WAKTU BEKERJA">KELUAR WAKTU BEKERJA</option>
+                        <option value="CUTI">CUTI</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Catatan / Sebab / Destinasi</label>
+                  <textarea id="f-catatan" placeholder="Sila nyatakan tujuan atau sebab..." class="w-full p-3 border rounded-xl h-24 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"></textarea>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button id="btn-checkin" onclick="submitLog('MASUK')" disabled class="bg-slate-200 text-slate-400 flex-1 py-5 rounded-2xl font-black uppercase text-sm cursor-not-allowed transition-all duration-300">Check-In</button>
+                    <button id="btn-checkout" onclick="submitLog('KELUAR')" disabled class="bg-slate-200 text-slate-400 flex-1 py-5 rounded-2xl font-black uppercase text-sm cursor-not-allowed transition-all duration-300">Check-Out</button>
+                </div>
+                <p id="status-msg" class="text-center text-xs font-bold mt-2 py-2 px-4 rounded-lg"></p>
+            </div>
+        </div>
+
+        <!-- ADMIN SECTION -->
+        <div id="section-admin" class="hidden-section space-y-6">
+            <div class="bg-slate-900 text-white p-5 rounded-2xl flex justify-between items-center shadow-xl no-print">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-blue-600 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>
+                    </div>
+                    <span class="font-bold tracking-wider uppercase text-sm">Dashboard Admin</span>
+                </div>
+                <button onclick="logout()" class="text-[10px] bg-red-500 hover:bg-red-600 px-6 py-2 rounded-full font-bold transition">LOG KELUAR</button>
+            </div>
+
+            <!-- Dashboard Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border flex flex-col items-center justify-center">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Analisis Harian</h3>
+                    <div class="w-full h-40"><canvas id="chartDay"></canvas></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border flex flex-col items-center justify-center">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Analisis Bulanan</h3>
+                    <div class="w-full h-40"><canvas id="chartMonth"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border text-center flex flex-col justify-center">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Hadir Hari Ini</h3>
+                    <p id="count-today" class="text-5xl font-black text-blue-600">0</p>
+                    <p class="text-[10px] text-slate-400 mt-2">GURU/STAF</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border text-center flex flex-col justify-center">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Luar / Cuti</h3>
+                    <p id="count-official" class="text-5xl font-black text-orange-500">0</p>
+                    <p class="text-[10px] text-slate-400 mt-2">REKOD SEMASA</p>
+                </div>
+            </div>
+
+            <!-- Sorting & Filter Controls -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border no-print">
+                <div class="flex flex-col md:flex-row gap-4 items-end">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Carian Nama Guru</label>
+                        <select id="filter-name" onchange="filterAdminTable()" class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                            <option value="">-- Semua Guru --</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Tarikh Rekod</label>
+                        <input type="date" id="filter-date" onchange="filterAdminTable()" class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="resetFilters()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition">RESET</button>
+                        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-md">CETAK</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="bg-white rounded-2xl shadow-xl border overflow-hidden">
+                <div class="p-5 border-b bg-slate-50 flex justify-between items-center">
+                    <h2 id="table-title" class="font-black text-slate-700 uppercase text-xs tracking-wider">Semua Rekod Pergerakan</h2>
+                    <span id="record-count" class="text-[10px] bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold">0 REKOD</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-500 uppercase font-black">
+                                <th class="p-4 border-b">Tarikh</th>
+                                <th class="p-4 border-b">Nama Guru</th>
+                                <th class="p-4 border-b">Kehadiran</th>
+                                <th class="p-4 border-b">Check-In</th>
+                                <th class="p-4 border-b">Check-Out</th>
+                                <th class="p-4 border-b">Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="text-slate-700">
+                            <tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Memuatkan data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCJsENe3519RyF6zwTLV34u_T-V1iKKAZbe7FeQN9B_iIxAgsC5LOi9qKjRppPTiwG/exec"; 
+        const SCHOOL = { lat: 3.2029666744669267, lng: 101.69953263326988 };
+        
+        let currentUser = null;
+        let isAdmin = false;
+        let isInside = false;
+        let gpsActive = false;
+        let hasCheckedIn = false;
+        let hasCheckedOut = false;
+        let rawLogs = [];
+        let myChartDay = null;
+        let myChartMonth = null;
+
+        setInterval(() => { 
+            document.getElementById('clock').innerText = new Date().toLocaleString('ms-MY', { dateStyle: 'full', timeStyle: 'medium' }); 
+        }, 1000);
+        document.getElementById('f-tarikh').value = new Date().toISOString().split('T')[0];
+        document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+
+        async function callBackend(action, extra = {}) {
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action, ...extra })
+                });
+                return await response.json();
+            } catch (e) { return { error: "Network failed" }; }
+        }
+
+        async function doLogin() {
+            const u = document.getElementById('userInp').value;
+            const p = document.getElementById('passInp').value;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('login-err');
+            
+            if (u === 'admin' && p === 'AdminJinjang1') {
+                isAdmin = true;
+                showSection('section-admin');
+                await loadAdminDashboard();
+                return;
+            }
+
+            btn.innerText = "Sila Tunggu...";
+            btn.disabled = true;
+
+            const rows = await callBackend("getUsers");
+            const user = rows.find(r => r[0].toString() === u && r[1].toString() === p);
+            
+            if (user) {
+                currentUser = user[2];
+                document.getElementById('user-name').innerText = currentUser;
+                showSection('section-user');
+                checkDailyStatus();
+            } else {
+                err.innerText = "Akses Ditolak: ID atau Kata Laluan Salah.";
+                err.classList.remove('hidden');
+                btn.innerText = "MASUK";
+                btn.disabled = false;
+            }
+        }
+
+        function handleTypeChange() {
+            const type = document.getElementById('f-kehadiran').value;
+            const gpsCard = document.getElementById('gps-card');
+            
+            if (type !== 'HADIR') {
+                gpsCard.style.opacity = "0.5";
+                gpsCard.style.pointerEvents = "none";
+                document.getElementById('geo-status').innerText = "AUTOPASS: " + type;
+                document.getElementById('geo-warn').classList.add('hidden');
+            } else {
+                gpsCard.style.opacity = "1";
+                gpsCard.style.pointerEvents = "auto";
+                if (!gpsActive) {
+                    document.getElementById('geo-status').innerText = "GPS Belum Diaktifkan";
+                } else {
+                    document.getElementById('geo-status').innerText = isInside ? "LOKASI DISAHKAN" : "LUAR KAWASAN";
+                    document.getElementById('geo-warn').classList.toggle('hidden', isInside);
+                }
+            }
+            updateButtons();
+        }
+
+        function initGPS() {
+            if (!navigator.geolocation) return alert("Pelayar tidak menyokong GPS");
+            const btn = document.getElementById('btn-activate-gps');
+            btn.innerText = "MENGESAHKAN KOORDINAT...";
+            gpsActive = true;
+            
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    const dist = calcDist(pos.coords.latitude, pos.coords.longitude, SCHOOL.lat, SCHOOL.lng);
+                    isInside = dist <= 50;
+                    
+                    const type = document.getElementById('f-kehadiran').value;
+                    if (type === 'HADIR') {
+                        document.getElementById('geo-status').innerText = isInside ? "LOKASI DISAHKAN" : "JARAK: " + dist.toFixed(0) + "m";
+                        document.getElementById('geo-warn').classList.toggle('hidden', isInside);
+                        document.getElementById('status-icon').className = isInside ? "p-3 bg-emerald-100 text-emerald-600 rounded-full" : "p-3 bg-red-100 text-red-600 rounded-full";
+                    }
+                    
+                    btn.innerText = "LOKASI AKTIF";
+                    btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+                    updateButtons();
+                },
+                (err) => { alert("Sila benarkan akses lokasi pada peranti anda."); },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function calcDist(la1, lo1, la2, lo2) {
+            const R = 6371e3;
+            const dLat = (la2-la1)*Math.PI/180;
+            const dLon = (lo2-lo1)*Math.PI/180;
+            const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        async function checkDailyStatus() {
+            const t = document.getElementById('f-tarikh').value;
+            const status = await callBackend("checkStatus", { nama: currentUser, tarikh: t });
+            hasCheckedIn = status.checkedIn;
+            hasCheckedOut = status.checkedOut;
+            
+            const msg = document.getElementById('status-msg');
+            if (hasCheckedOut) {
+                msg.innerText = "STATUS: REKOD HARI INI SELESAI";
+                msg.className = "text-center text-[10px] font-black mt-2 py-2 px-4 rounded-lg bg-emerald-100 text-emerald-700 uppercase";
+            } else if (hasCheckedIn) {
+                msg.innerText = "STATUS: ANDA SEDANG BERTUGAS (CHECK-IN AKTIF)";
+                msg.className = "text-center text-[10px] font-black mt-2 py-2 px-4 rounded-lg bg-blue-100 text-blue-700 uppercase";
+            } else {
+                msg.innerText = "STATUS: BELUM ADA REKOD HARI INI";
+                msg.className = "text-center text-[10px] font-black mt-2 py-2 px-4 rounded-lg bg-slate-100 text-slate-500 uppercase";
+            }
+            updateButtons();
+        }
+
+        function updateButtons() {
+            const btnIn = document.getElementById('btn-checkin');
+            const btnOut = document.getElementById('btn-checkout');
+            const type = document.getElementById('f-kehadiran').value;
+            
+            const locationValid = (type !== 'HADIR') || isInside;
+            
+            const canIn = locationValid && !hasCheckedIn;
+            btnIn.disabled = !canIn;
+            btnIn.className = canIn ? "bg-blue-600 text-white flex-1 py-5 rounded-2xl font-black shadow-lg uppercase text-sm hover:scale-[1.02]" : "bg-slate-200 text-slate-400 flex-1 py-5 rounded-2xl font-black uppercase text-sm cursor-not-allowed";
+            
+            const canOut = locationValid && hasCheckedIn && !hasCheckedOut;
+            btnOut.disabled = !canOut;
+            btnOut.className = canOut ? "bg-orange-500 text-white flex-1 py-5 rounded-2xl font-black shadow-lg uppercase text-sm hover:scale-[1.02]" : "bg-slate-200 text-slate-400 flex-1 py-5 rounded-2xl font-black uppercase text-sm cursor-not-allowed";
+        }
+
+        async function submitLog(jenis) {
+            // Gunakan format 24 jam untuk masa
+            const now = new Date();
+            const masa24h = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+
+            const data = {
+                tarikh: document.getElementById('f-tarikh').value,
+                nama: currentUser,
+                kehadiran: document.getElementById('f-kehadiran').value,
+                butiran: document.getElementById('f-catatan').value,
+                masa: masa24h,
+                jenis: jenis
+            };
+
+            if (!confirm("Sahkan rekod " + jenis + " ("+data.kehadiran+")?")) return;
+            const res = await callBackend("processLog", { payload: JSON.stringify(data) });
+            if (res.status === "OK") {
+                alert("Berjaya disimpan.");
+                checkDailyStatus();
+            } else {
+                alert("Ralat: " + res.status);
+            }
+        }
+
+        // --- ADMIN FUNCTIONS ---
+
+        async function loadAdminDashboard() {
+            const data = await callBackend("getLogs");
+            if (!data || data.length <= 1) return;
+            
+            rawLogs = data.slice(1);
+            const names = [...new Set(rawLogs.map(l => l[1]))].sort();
+            const filterName = document.getElementById('filter-name');
+            filterName.innerHTML = '<option value="">-- Semua Guru --</option>';
+            names.forEach(n => filterName.innerHTML += '<option value="'+n+'">'+n+'</option>');
+            
+            filterAdminTable();
+            updateCharts();
+        }
+
+        function filterAdminTable() {
+            const nameVal = document.getElementById('filter-name').value;
+            const dateVal = document.getElementById('filter-date').value;
+            const tbody = document.getElementById('adminTableBody');
+            const title = document.getElementById('table-title');
+            
+            tbody.innerHTML = "";
+            let filtered = [];
+
+            if (nameVal) {
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                filtered = rawLogs.filter(l => {
+                    const d = new Date(l[0]);
+                    return l[1] === nameVal && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                });
+                title.innerText = "Rekod Bulanan: " + nameVal;
+            } else if (dateVal) {
+                filtered = rawLogs.filter(l => {
+                    const iso = new Date(l[0]).toISOString().split('T')[0];
+                    return iso === dateVal;
+                });
+                title.innerText = "Rekod Tarikh: " + new Date(dateVal).toLocaleDateString('ms-MY');
+            } else {
+                filtered = [...rawLogs];
+                title.innerText = "Semua Rekod Pergerakan";
+            }
+
+            document.getElementById('record-count').innerText = filtered.length + " REKOD";
+
+            filtered.reverse().forEach(l => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-blue-50 border-b transition text-[11px]";
+                
+                let labelClass = "bg-slate-50 text-slate-600";
+                if(l[2] === 'HADIR') labelClass = "bg-emerald-50 text-emerald-600";
+                if(l[2] === 'URUSAN RASMI') labelClass = "bg-blue-50 text-blue-600";
+                if(l[2] === 'CUTI') labelClass = "bg-red-50 text-red-600";
+
+                tr.innerHTML = '<td class="p-4 font-medium">' + new Date(l[0]).toLocaleDateString('ms-MY') + '</td>' +
+                               '<td class="p-4 font-bold text-slate-900">' + l[1] + '</td>' +
+                               '<td class="p-4"><span class="px-2 py-1 rounded '+ labelClass +'">' + l[2] + '</span></td>' +
+                               '<td class="p-4 font-mono text-blue-600 font-bold">' + (l[4] || '-') + '</td>' +
+                               '<td class="p-4 font-mono text-red-500 font-bold">' + (l[5] || '-') + '</td>' +
+                               '<td class="p-4 italic text-slate-500">' + (l[6] || '') + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-name').value = "";
+            document.getElementById('filter-date').value = "";
+            filterAdminTable();
+        }
+
+        function updateCharts() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            let dayCounts = { HADIR: 0, LUAR: 0 };
+            let monthCounts = { HADIR: 0, LUAR: 0 };
+
+            rawLogs.forEach(l => {
+                const d = new Date(l[0]);
+                const iso = d.toISOString().split('T')[0];
+                
+                // Dashboard reflect data check-in hari ini
+                if (iso === todayStr) {
+                    if (l[2] === "HADIR") dayCounts.HADIR++;
+                    else dayCounts.LUAR++;
+                }
+                
+                if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    if (l[2] === "HADIR") monthCounts.HADIR++;
+                    else monthCounts.LUAR++;
+                }
+            });
+
+            document.getElementById('count-today').innerText = dayCounts.HADIR;
+            document.getElementById('count-official').innerText = dayCounts.LUAR;
+
+            renderPieChart('chartDay', dayCounts, myChartDay, (c) => myChartDay = c);
+            renderPieChart('chartMonth', monthCounts, myChartMonth, (c) => myChartMonth = c);
+        }
+
+        function renderPieChart(id, stats, chartVar, setVar) {
+            const ctx = document.getElementById(id).getContext('2d');
+            if (chartVar) chartVar.destroy();
+            const newChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Hadir (S)', 'Luar/Cuti'],
+                    datasets: [{
+                        data: [stats.HADIR, stats.LUAR],
+                        backgroundColor: ['#2563eb', '#f59e0b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.raw;
+                                }
+                            }
+                        }
+                    } 
+                }
+            });
+            setVar(newChart);
+        }
+
+        function showSection(id) {
+            document.getElementById('section-login').classList.add('hidden-section');
+            document.getElementById('section-user').classList.add('hidden-section');
+            document.getElementById('section-admin').classList.add('hidden-section');
+            document.getElementById(id).classList.remove('hidden-section');
+        }
+
+        function logout() { location.reload(); }
+    </script>
+</body>
+</html>
