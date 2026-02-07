@@ -129,6 +129,29 @@
 
             <!-- Sorting & Filter Controls -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border no-print">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div class="col-span-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Carian Nama Guru</label>
+                            <select id="filter-name" onchange="filterAdminTable()" class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                                <option value="">-- Semua Guru --</option>
+                            </select>
+                    </div>
+            <div class="col-span-1">
+                <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Tarikh Spesifik</label>
+                    <input type="date" id="filter-date" onchange="filterAdminTable()" class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+            </div>
+                <div class="col-span-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Rekod Bulanan</label>
+                        <input type="month" id="filter-month" onchange="filterAdminTable()" class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                </div>
+            <div class="flex gap-2">
+                <button onclick="resetFilters()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition">RESET</button>
+                    <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-md">CETAK</button>
+            </div>
+                </div>
+            </div>
+            <!-- Sorting & Filter Controls kod lama v1 
+            <div class="bg-white p-6 rounded-2xl shadow-sm border no-print">
                 <div class="flex flex-col md:flex-row gap-4 items-end">
                     <div class="flex-1">
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Carian Nama Guru</label>
@@ -145,7 +168,7 @@
                         <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-md">CETAK</button>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Data Table -->
             <div class="bg-white rounded-2xl shadow-xl border overflow-hidden">
@@ -496,4 +519,5 @@
         function logout() { location.reload(); }
     </script>
 </body>
+
 </html>
